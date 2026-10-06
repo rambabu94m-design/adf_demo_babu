@@ -1,0 +1,124 @@
+{
+	"name": "email pipeline_Multiple",
+	"properties": {
+		"activities": [
+			{
+				"name": "send email",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Email body",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-23.northcentralus.logic.azure.com:443/workflows/4933aced563040d492d75e6b6998e3da/triggers/When_an_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_an_HTTP_request_is_received%2Frun&sv=1.0&sig=-ztBraW9HIgPr3wUKuuPsoYtp75LnRl7Gvzqk2jtvJk",
+					"body": {
+						"value": "@variables('logics_app_body')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Email body",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "status",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "body",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "logics_app_body",
+					"value": {
+						"value": "{\"emailrecepient\":\"@{pipeline().parameters.emailrecepient}\",\n \"subject\":\"@{variables('statusvariable')}\",\n \"body\":\"@{variables('body variable')}\"\n }",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "status",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "statusvariable",
+					"value": {
+						"value": "Injection completed",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "body",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "body variable",
+					"value": {
+						"value": "The injection process has been completed for all tables and below is the status:\n@{replace(string(pipeline().parameters.Table_status),'\"','')}\n\npipeline run id = @{pipeline().RunId}",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"emailrecepient": {
+				"type": "string"
+			},
+			"Table_status": {
+				"type": "array"
+			}
+		},
+		"variables": {
+			"logics_app_body": {
+				"type": "String"
+			},
+			"statusvariable": {
+				"type": "String"
+			},
+			"body variable": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-10-05T10:01:53Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

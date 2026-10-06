@@ -1,0 +1,25 @@
+{
+	"name": "demo-adf-babu",
+	"properties": {
+		"globalParameters": {
+			"Globalvariablemail": {
+				"type": "string",
+				"value": "rambabu94m@gmail.com"
+			},
+			"emailglobalparameter": {
+				"type": "string",
+				"value": "rambabu94m@gmail.com"
+			}
+		},
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "7cd09628-8e40-4151-96ad-9b40f2e198fc",
+		"tenantId": "c5d226c6-17ae-4862-83cb-dc844fb8d543"
+	}
+}

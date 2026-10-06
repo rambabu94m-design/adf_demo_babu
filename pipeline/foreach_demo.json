@@ -1,0 +1,165 @@
+{
+	"name": "foreach_demo",
+	"properties": {
+		"activities": [
+			{
+				"name": "inject all tables",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "read list of tables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('read list of tables').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "Execute injection pipeline",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "data injection pipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Table_name": {
+										"value": "@item().table_name",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Append variable_success",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "Execute injection pipeline",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "Table_status",
+								"value": {
+									"value": "@{item().table_name} - success",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Append variable_failure",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "Execute injection pipeline",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "Table_status",
+								"value": {
+									"value": "@{item().table_name} - failure",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "read list of tables",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select * from metadata.table_list",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_sourceserver_02",
+						"type": "DatasetReference",
+						"parameters": {
+							"schema": "dbo",
+							"Table_name": "employee"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "consolidate pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "inject all tables",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "email pipeline_Multiple",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"emailrecepient": {
+							"value": "@pipeline().globalParameters.emailglobalparameter",
+							"type": "Expression"
+						},
+						"Table_status": {
+							"value": "@variables('Table_status')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"variables": {
+			"Table_status": {
+				"type": "Array"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-10-05T10:01:54Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

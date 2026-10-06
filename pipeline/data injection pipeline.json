@@ -1,0 +1,290 @@
+{
+	"name": "data injection pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "send_injection_pipiline_for_failure",
+				"type": "ExecutePipeline",
+				"state": "Inactive",
+				"onInactiveMarkAs": "Succeeded",
+				"dependsOn": [
+					{
+						"activity": "count check",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "email pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"Table_name": {
+							"value": "@pipeline().parameters.Table_name",
+							"type": "Expression"
+						},
+						"emailrecepient": {
+							"value": "@pipeline().globalParameters.emailglobalparameter",
+							"type": "Expression"
+						},
+						"status": "failure"
+					}
+				}
+			},
+			{
+				"name": "to get metedata_date",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select watermark_value from metadata.table_watermarks where table_name='@{toLower(pipeline().parameters.Table_name)}'",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_sourceserver_02",
+						"type": "DatasetReference",
+						"parameters": {
+							"schema": "dbo",
+							"Table_name": "employee"
+						}
+					}
+				}
+			},
+			{
+				"name": "fetch new rows from table",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "to get metedata_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "@concat(\n'SELECT COUNT(*) AS count FROM dbo.',\npipeline().parameters.Table_name,\n' WHERE datemodified > CAST(''',\nactivity('to get metedata_date').output.firstRow.watermark_value,\n''' AS datetime2)'\n)",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_sourceserver_02",
+						"type": "DatasetReference",
+						"parameters": {
+							"schema": "dbo",
+							"Table_name": "employee"
+						}
+					}
+				}
+			},
+			{
+				"name": "count check",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "fetch new rows from table",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "to get metedata_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('fetch new rows from table').output.firstRow.count,0)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "data injection",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "SELECT *\nFROM dbo.Employee\nWHERE DateModified > CAST('@{activity('to get metedata_date').output.firstRow.watermark_value}' AS datetime2)",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "DS_sourceserver_02",
+									"type": "DatasetReference",
+									"parameters": {
+										"schema": "dbo",
+										"Table_name": {
+											"value": "@pipeline().parameters.Table_name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DS_target_02",
+									"type": "DatasetReference",
+									"parameters": {
+										"Table_name": {
+											"value": "@pipeline().parameters.Table_name",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "updating watermark value",
+							"type": "Script",
+							"dependsOn": [
+								{
+									"activity": "data injection",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "LS_sourceserver_02",
+								"type": "LinkedServiceReference"
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"type": "Query",
+										"text": {
+											"value": "update metadata.table_watermarks\nset watermark_value=GETUTCDATE()\nwhere table_name='@{toLower(pipeline().parameters.Table_name)}'",
+											"type": "Expression"
+										}
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "send_injection_pipiline",
+				"type": "ExecutePipeline",
+				"state": "Inactive",
+				"onInactiveMarkAs": "Succeeded",
+				"dependsOn": [
+					{
+						"activity": "count check",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "email pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"Table_name": {
+							"value": "@pipeline().parameters.Table_name",
+							"type": "Expression"
+						},
+						"emailrecepient": {
+							"value": "@pipeline().globalParameters.emailglobalparameter",
+							"type": "Expression"
+						},
+						"status": "success"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"Table_name": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-10-05T16:51:20Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
