@@ -154,6 +154,7 @@
 					},
 					{
 						"name": "body",
+						"description": "to describe the body of the email",
 						"type": "SetVariable",
 						"dependsOn": [],
 						"policy": {
