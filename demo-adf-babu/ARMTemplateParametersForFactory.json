@@ -1,0 +1,51 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "demo-adf-babu"
+		},
+		"AzureDataLakeStorage1_accountKey": {
+			"value": ""
+		},
+		"LS_DS_destination_accountKey": {
+			"value": ""
+		},
+		"LS_destination_02_accountKey": {
+			"value": ""
+		},
+		"LS_destination_file_accountKey": {
+			"value": ""
+		},
+		"LS_sourceserver_02_password": {
+			"value": ""
+		},
+		"AzureDataLakeStorage1_properties_typeProperties_url": {
+			"value": "https://destinationstoragenname.dfs.core.windows.net/"
+		},
+		"AzureSqlDatabase2_properties_typeProperties_server": {
+			"value": "sourceserverserver.database.windows.net"
+		},
+		"AzureSqlDatabase2_properties_typeProperties_database": {
+			"value": "sourcedatabase"
+		},
+		"LS_DS_destination_properties_typeProperties_url": {
+			"value": "https://destinationstoragenname.dfs.core.windows.net/"
+		},
+		"LS_destination_02_properties_typeProperties_url": {
+			"value": "https://destinationstoragenname.dfs.core.windows.net/"
+		},
+		"LS_destination_file_properties_typeProperties_url": {
+			"value": "https://destinationstoragenname.dfs.core.windows.net/"
+		},
+		"LS_sourceserver_02_properties_typeProperties_server": {
+			"value": "sourceserverserver.database.windows.net"
+		},
+		"LS_sourceserver_02_properties_typeProperties_database": {
+			"value": "sourcedatabase"
+		},
+		"LS_sourceserver_02_properties_typeProperties_userName": {
+			"value": "babu"
+		}
+	}
+}
